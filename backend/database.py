@@ -1,47 +1,21 @@
-"""
-Productivity Assistant AI - Database Module
-Handles SQLite database initialization and connection management.
-"""
+from flask_sqlalchemy import SQLAlchemy
 
-import sqlite3
-import os
-from flask import g
-from config import Config
-
-
-def get_db():
-    """
-    Get a database connection from Flask's application context.
-    Creates a new connection if one doesn't exist.
-    """
-    if "db" not in g:
-        g.db = sqlite3.connect(
-            Config.DATABASE_URI,
-            detect_types=sqlite3.PARSE_DECLTYPES,
-        )
-        g.db.row_factory = sqlite3.Row  # Return rows as dict-like objects
-
-    return g.db
-
-
-def close_db(error=None):
-    """Close the database connection at the end of a request."""
-    db = g.pop("db", None)
-    if db is not None:
-        db.close()
-
+# Initialize SQLAlchemy instance
+# We will bind it to the app in app.py
+db = SQLAlchemy()
 
 def init_db(app):
     """
-    Initialize the database schema.
-    Creates tables if they do not already exist.
+    Initialize the database with the Flask app.
+    Automatically creates all tables defined in models if they don't exist.
     """
+    db.init_app(app)
+    
+    # We use app.app_context() to ensure we have access to app configuration
+    # when creating tables.
     with app.app_context():
-        db = get_db()
-        # Schema will be applied in future commits
-        # Placeholder: ensure the DB file is created
-        db.execute("SELECT 1")
-        db.commit()
-        print(f"[DB] Database initialized at: {Config.DATABASE_URI}")
-
-    app.teardown_appcontext(close_db)
+        # Import models here to ensure they are registered with SQLAlchemy
+        # before creating tables.
+        import models
+        db.create_all()
+        print("Database initialized successfully.")

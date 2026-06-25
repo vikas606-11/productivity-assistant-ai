@@ -1,32 +1,35 @@
-"""
-Productivity Assistant AI - Flask Backend
-Entry point for the Flask application.
-"""
-
 from flask import Flask
 from flask_cors import CORS
+
 from config import Config
-from routes import register_routes
+from database import init_db
+from routes import api_bp
 
-
-def create_app(config_class=Config):
-    """Application factory pattern."""
+def create_app():
+    """
+    Application factory function to create and configure the Flask app.
+    """
+    # 1. Configure Flask application
     app = Flask(__name__)
-    app.config.from_object(config_class)
-
-    # Enable CORS for all origins (development only)
-    CORS(app, resources={r"/api/*": {"origins": "*"}, r"/health": {"origins": "*"}})
-
-    # Register all route blueprints
-    register_routes(app)
-
+    
+    # 6. Load configuration using python-dotenv (handled in config.py)
+    # 7. Use Config class
+    app.config.from_object(Config)
+    
+    # 2. Configure Flask-CORS
+    # Enable CORS for all routes by default
+    CORS(app)
+    
+    # 3 & 4 & 5. Configure SQLAlchemy, SQLite, and initialize DB
+    init_db(app)
+    
+    # 8. Register blueprints
+    app.register_blueprint(api_bp)
+    
     return app
 
-
-if __name__ == "__main__":
+if __name__ == '__main__':
+    # Entry point for the application
     app = create_app()
-    app.run(
-        host=app.config.get("HOST", "0.0.0.0"),
-        port=app.config.get("PORT", 5000),
-        debug=app.config.get("DEBUG", True),
-    )
+    # Run the application
+    app.run(debug=app.config['DEBUG'], host='0.0.0.0', port=5000)
