@@ -3,7 +3,7 @@ from flask_cors import CORS
 
 from config import Config
 from database import init_db
-from routes import api_bp
+from routes import api_bp, tasks_bp, notes_bp
 
 def create_app():
     """
@@ -25,6 +25,8 @@ def create_app():
     
     # 8. Register blueprints
     app.register_blueprint(api_bp)
+    app.register_blueprint(tasks_bp)
+    app.register_blueprint(notes_bp)
     
     return app
 
