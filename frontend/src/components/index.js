@@ -17,5 +17,10 @@ export { default as FilterPanel } from './FilterPanel';
 export { default as TagBadge } from './TagBadge';
 export { default as RecentSearches } from './RecentSearches';
 export { default as SearchText } from './SearchText';
+export { default as SummaryCard } from './SummaryCard';
+export { default as SuggestionCard } from './SuggestionCard';
+export { default as StatisticsCards } from './StatisticsCards';
+export { default as InsightsPanel } from './InsightsPanel';
+
 
 

@@ -4,6 +4,7 @@ from flask import Blueprint, jsonify, request
 from database import db
 from models import Task, Note
 from services.gemini_service import get_gemini_service
+from services.summary_service import get_summary_response_data, mark_summary_dirty
 
 logger = logging.getLogger(__name__)
 
@@ -147,6 +148,7 @@ def capture_productivity_items():
                 created_notes.append(note)
                 
         db.session.commit()
+        mark_summary_dirty()
         
         # Log database insertion result
         logger.info(f"Successfully saved captured items to database: {len(created_tasks)} tasks, {len(created_notes)} notes.")
@@ -202,6 +204,7 @@ def create_task():
     
     db.session.add(task)
     db.session.commit()
+    mark_summary_dirty()
     return make_response(True, "Task created successfully", task.to_dict(), 201)
 
 @tasks_bp.route('', methods=['GET'])
@@ -259,6 +262,7 @@ def update_task(task_id):
         task.status = data.get('status')
         
     db.session.commit()
+    mark_summary_dirty()
     return make_response(True, "Task updated successfully", task.to_dict())
 
 @tasks_bp.route('/<int:task_id>', methods=['DELETE'])
@@ -272,6 +276,7 @@ def delete_task(task_id):
     
     db.session.delete(task)
     db.session.commit()
+    mark_summary_dirty()
     return make_response(True, "Task deleted successfully")
 
 @tasks_bp.route('/<int:task_id>/complete', methods=['PATCH'])
@@ -285,6 +290,7 @@ def complete_task(task_id):
     
     task.status = 'Completed'
     db.session.commit()
+    mark_summary_dirty()
     return make_response(True, "Task marked as completed", task.to_dict())
 
 # ==============================================================================
@@ -309,6 +315,7 @@ def create_note():
     
     db.session.add(note)
     db.session.commit()
+    mark_summary_dirty()
     return make_response(True, "Note created successfully", note.to_dict(), 201)
 
 @notes_bp.route('', methods=['GET'])
@@ -351,6 +358,7 @@ def update_note(note_id):
         note.content = data.get('content')
         
     db.session.commit()
+    mark_summary_dirty()
     return make_response(True, "Note updated successfully", note.to_dict())
 
 @notes_bp.route('/<int:note_id>', methods=['DELETE'])
@@ -364,6 +372,7 @@ def delete_note(note_id):
         
     db.session.delete(note)
     db.session.commit()
+    mark_summary_dirty()
     return make_response(True, "Note deleted successfully")
 
 # ==============================================================================
@@ -475,3 +484,17 @@ def search_items():
     except Exception as e:
         logger.error(f"Search query failed: {str(e)}")
         return make_response(False, f"Search failed: {str(e)}", status_code=500)
+
+@api_bp.route('/api/summary', methods=['GET'])
+def get_productivity_summary():
+    """
+    Get the AI productivity summary, insights, and metrics statistics.
+    Supports a 'refresh' query parameter to force Gemini regeneration.
+    """
+    force_refresh = request.args.get('refresh', 'false').lower() == 'true'
+    try:
+        data = get_summary_response_data(force_refresh=force_refresh)
+        return make_response(True, "Productivity summary retrieved successfully", data)
+    except Exception as e:
+        logger.error(f"Failed to generate/retrieve summary: {str(e)}")
+        return make_response(False, f"Failed to retrieve summary: {str(e)}", status_code=500)

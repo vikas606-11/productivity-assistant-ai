@@ -47,6 +47,12 @@ export const taskService = {
     });
     return response.data;
   },
+  getSummary: async (forceRefresh = false) => {
+    const response = await api.get('/api/summary', {
+      params: { refresh: forceRefresh }
+    });
+    return response.data;
+  },
 };
 
 export const noteService = {
