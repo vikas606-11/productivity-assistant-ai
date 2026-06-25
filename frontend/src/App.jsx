@@ -4,6 +4,7 @@ import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import Tasks from './pages/Tasks';
 import Notes from './pages/Notes';
+import Search from './pages/Search';
 import { ToastProvider } from './components/Toast';
 
 function App() {
@@ -28,6 +29,7 @@ function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/tasks" element={<Tasks />} />
               <Route path="/notes" element={<Notes />} />
+              <Route path="/search" element={<Search />} />
             </Routes>
           </main>
           

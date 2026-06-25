@@ -33,6 +33,20 @@ export const taskService = {
     const response = await api.patch(`/api/tasks/${id}/complete`);
     return response.data;
   },
+  search: async (params = {}) => {
+    const response = await api.get('/api/search', { params });
+    return response.data;
+  },
+  getTags: async () => {
+    const response = await api.get('/api/tags');
+    return response.data;
+  },
+  suggestTags: async (title, description = '') => {
+    const response = await api.get('/api/tasks/suggest-tags', {
+      params: { title, description }
+    });
+    return response.data;
+  },
 };
 
 export const noteService = {

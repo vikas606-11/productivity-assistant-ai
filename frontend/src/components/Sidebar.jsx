@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { FiLayout, FiCheckSquare, FiFileText, FiMenu, FiX } from 'react-icons/fi';
+import { FiLayout, FiCheckSquare, FiFileText, FiMenu, FiX, FiSearch } from 'react-icons/fi';
 
 const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -9,6 +9,7 @@ const Sidebar = () => {
     { to: '/', label: 'Dashboard', icon: FiLayout },
     { to: '/tasks', label: 'Tasks', icon: FiCheckSquare },
     { to: '/notes', label: 'Notes', icon: FiFileText },
+    { to: '/search', label: 'Search & Tags', icon: FiSearch },
   ];
 
   return (

@@ -12,4 +12,10 @@
  */
 
 export { default as VoiceInput } from './VoiceInput';
+export { default as SearchBar } from './SearchBar';
+export { default as FilterPanel } from './FilterPanel';
+export { default as TagBadge } from './TagBadge';
+export { default as RecentSearches } from './RecentSearches';
+export { default as SearchText } from './SearchText';
+
 

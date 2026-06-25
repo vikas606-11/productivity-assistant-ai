@@ -61,6 +61,37 @@ class GeminiService:
                     logger.error("Both attempts to process natural language using Gemini API failed.")
                     raise e
 
+    def generate_tags(self, title, description=""):
+        """
+        Extracts 3 to 6 lowercase single-word semantic tags representing key technologies,
+        topics, categories, or actions from a task's title and description.
+        """
+        prompt = f"""You are a professional natural language processing assistant.
+Extract 3 to 6 semantic, lowercase, single-word tags representing key technologies, topics, categories, or actions from the following task details:
+Title: "{title}"
+Description: "{description or ''}"
+
+Output Guidelines:
+Return the result as a raw JSON array of strings, e.g. ["aws", "cloud", "security", "presentation"].
+All tags must be lowercase. Do not include spaces or special characters in individual tags.
+Do not wrap your output in markdown formatting, code blocks, or include any extra text. Output ONLY the raw JSON array.
+"""
+        logger.info(f"Generating semantic tags for title: '{title}'")
+        try:
+            response = self.model.generate_content(
+                prompt,
+                generation_config={"response_mime_type": "application/json"}
+            )
+            response_text = response.text
+            cleaned_text = self._clean_json_blocks(response_text)
+            tags = json.loads(cleaned_text)
+            if isinstance(tags, list):
+                return [str(tag).strip().lower() for tag in tags if str(tag).strip()]
+            return []
+        except Exception as e:
+            logger.warning(f"Failed to generate tags using Gemini API: {str(e)}")
+            raise e
+
     def _clean_json_blocks(self, text):
         """
         Strips markdown code blocks (e.g., ```json ... ```) from a text response if present.
@@ -74,3 +105,4 @@ class GeminiService:
                 lines = lines[:-1]
             text = "\n".join(lines).strip()
         return text
+

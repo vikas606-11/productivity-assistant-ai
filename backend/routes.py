@@ -7,6 +7,31 @@ from services.gemini_service import get_gemini_service
 
 logger = logging.getLogger(__name__)
 
+def auto_generate_tags(title, description=""):
+    """
+    Helper function to automatically generate tags using Gemini Service,
+    falling back to a regex word extractor if config/service is unavailable.
+    """
+    try:
+        service = get_gemini_service()
+        tags = service.generate_tags(title, description)
+        if tags:
+            return tags
+    except Exception as e:
+        logger.warning(f"AI tagging unavailable, using fallback: {str(e)}")
+    
+    # Simple regex fallback (alphanumeric words >= 4 chars, filtered by common stop words)
+    import re
+    words = re.findall(r'\b[a-zA-Z]{4,}\b', f"{title} {description or ''}".lower())
+    stop_words = {
+        'with', 'your', 'from', 'this', 'that', 'then', 'them', 'they', 'have', 
+        'some', 'task', 'todo', 'will', 'about', 'their', 'there', 'here', 'when',
+        'what', 'could', 'would', 'should', 'other', 'before', 'after', 'please',
+        'for', 'and', 'the', 'meeting', 'discussion'
+    }
+    fallback_tags = list(set([w for w in words if w not in stop_words]))[:5]
+    return fallback_tags
+
 # Create Blueprints for modular route management
 api_bp = Blueprint('api', __name__)
 tasks_bp = Blueprint('tasks', __name__, url_prefix='/api/tasks')
@@ -83,10 +108,14 @@ def capture_productivity_items():
             # Tasks and Reminders both map to the Task table
             if item_type in ('task', 'reminder'):
                 tags = item.get('tags', [])
-                if isinstance(tags, list):
-                    tags_str = ','.join(map(str, tags))
+                if not tags or (isinstance(tags, list) and not tags) or (isinstance(tags, str) and not tags.strip()):
+                    gen_tags = auto_generate_tags(item.get('title', ''), item.get('description', ''))
+                    tags_str = ','.join(gen_tags) if gen_tags else None
                 else:
-                    tags_str = str(tags) if tags else None
+                    if isinstance(tags, list):
+                        tags_str = ','.join(map(str, tags))
+                    else:
+                        tags_str = str(tags) if tags else None
                 
                 # Truncate strings to fit database schema constraints if necessary
                 due_date = item.get('due_date')
@@ -149,12 +178,16 @@ def create_task():
     if not title or not str(title).strip():
         return make_response(False, "Task title is required", status_code=400)
     
-    # Process tags if provided as a list
+    # Process tags if provided or auto-generate
     tags = data.get('tags')
-    if isinstance(tags, list):
-        tags = ','.join(map(str, tags))
-    elif tags is not None:
-        tags = str(tags)
+    if not tags or (isinstance(tags, list) and not tags) or (isinstance(tags, str) and not tags.strip()):
+        gen_tags = auto_generate_tags(title, data.get('description', ''))
+        tags = ','.join(gen_tags) if gen_tags else None
+    else:
+        if isinstance(tags, list):
+            tags = ','.join(map(str, tags))
+        else:
+            tags = str(tags)
         
     task = Task(
         title=str(title).strip(),
@@ -332,3 +365,113 @@ def delete_note(note_id):
     db.session.delete(note)
     db.session.commit()
     return make_response(True, "Note deleted successfully")
+
+# ==============================================================================
+# SEARCH & TAG ROUTES (api_bp / tasks_bp)
+# ==============================================================================
+
+@api_bp.route('/api/tags', methods=['GET'])
+def get_all_tags():
+    """
+    Retrieve all unique tags across all tasks.
+    """
+    try:
+        tasks = Task.query.all()
+        unique_tags = set()
+        for task in tasks:
+            if task.tags:
+                for tag in task.tags.split(','):
+                    cleaned_tag = tag.strip().lower()
+                    if cleaned_tag:
+                        unique_tags.add(cleaned_tag)
+        return make_response(True, "Unique tags retrieved successfully", sorted(list(unique_tags)))
+    except Exception as e:
+        logger.error(f"Failed to retrieve unique tags: {str(e)}")
+        return make_response(False, f"Failed to retrieve unique tags: {str(e)}", status_code=500)
+
+@tasks_bp.route('/suggest-tags', methods=['GET'])
+def suggest_tags():
+    """
+    Get AI-suggested tags based on a task title and description.
+    """
+    title = request.args.get('title', '')
+    description = request.args.get('description', '')
+    
+    if not title.strip():
+        return make_response(False, "Task title is required to suggest tags", status_code=400)
+        
+    tags = auto_generate_tags(title, description)
+    return make_response(True, "Tags suggested successfully", tags)
+
+@api_bp.route('/api/search', methods=['GET'])
+def search_items():
+    """
+    Search tasks and notes by query parameter q.
+    Optionally filters tasks by category, status, priority, and due_date.
+    """
+    q = request.args.get('q', '').strip()
+    category = request.args.get('category', 'All').strip()
+    status = request.args.get('status', 'All').strip()
+    priority = request.args.get('priority', 'All').strip()
+    due_date = request.args.get('due_date', '').strip()
+    
+    # Base queries
+    task_query = Task.query
+    note_query = Note.query
+    
+    # 1. Search filter
+    if q:
+        search_pattern = f"%{q}%"
+        task_query = task_query.filter(
+            db.or_(
+                Task.title.like(search_pattern),
+                Task.description.like(search_pattern),
+                Task.category.like(search_pattern),
+                Task.tags.like(search_pattern)
+            )
+        )
+        
+        note_query = note_query.filter(
+            db.or_(
+                Note.title.like(search_pattern),
+                Note.content.like(search_pattern)
+            )
+        )
+        
+    # 2. Category, Status, Priority, Due Date filters (apply to Tasks only)
+    has_task_filters = False
+    
+    if category and category != 'All':
+        task_query = task_query.filter(Task.category == category)
+        has_task_filters = True
+        
+    if status and status != 'All':
+        task_query = task_query.filter(Task.status == status)
+        has_task_filters = True
+        
+    if priority and priority != 'All':
+        task_query = task_query.filter(Task.priority == priority)
+        has_task_filters = True
+        
+    if due_date:
+        task_query = task_query.filter(Task.due_date == due_date)
+        has_task_filters = True
+        
+    try:
+        tasks = task_query.all()
+        
+        # If task-specific filters are active, notes are excluded
+        if has_task_filters:
+            notes = []
+        else:
+            notes = note_query.all()
+            
+        results = {
+            "tasks": [t.to_dict() for t in tasks],
+            "notes": [n.to_dict() for n in notes]
+        }
+        
+        return make_response(True, "Search results retrieved successfully", results)
+    except Exception as e:
+        logger.error(f"Search query failed: {str(e)}")
+        return make_response(False, f"Search failed: {str(e)}", status_code=500)

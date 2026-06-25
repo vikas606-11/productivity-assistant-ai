@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FiX, FiCheck } from 'react-icons/fi';
+import { taskService } from '../services/api';
+import TagBadge from './TagBadge';
 
 const TaskModal = ({ isOpen, onClose, onSave, task = null }) => {
   const [title, setTitle] = useState('');
@@ -8,7 +10,10 @@ const TaskModal = ({ isOpen, onClose, onSave, task = null }) => {
   const [priority, setPriority] = useState('Medium');
   const [dueDate, setDueDate] = useState('');
   const [dueTime, setDueTime] = useState('');
-  const [tags, setTags] = useState('');
+  const [tagList, setTagList] = useState([]);
+  const [tagInput, setTagInput] = useState('');
+  const [suggestedTags, setSuggestedTags] = useState([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
 
   const categories = ['Work', 'Study', 'Shopping', 'Personal', 'Health', 'Finance', 'Other'];
   const priorities = ['High', 'Medium', 'Low'];
@@ -21,7 +26,14 @@ const TaskModal = ({ isOpen, onClose, onSave, task = null }) => {
       setPriority(task.priority || 'Medium');
       setDueDate(task.due_date || '');
       setDueTime(task.due_time || '');
-      setTags(task.tags ? (Array.isArray(task.tags) ? task.tags.join(', ') : task.tags) : '');
+      
+      // Parse tags
+      const initialTags = task.tags
+        ? (Array.isArray(task.tags)
+            ? task.tags
+            : task.tags.split(',').map((t) => t.trim()))
+        : [];
+      setTagList(initialTags.filter(Boolean));
     } else {
       setTitle('');
       setDescription('');
@@ -29,21 +41,55 @@ const TaskModal = ({ isOpen, onClose, onSave, task = null }) => {
       setPriority('Medium');
       setDueDate('');
       setDueTime('');
-      setTags('');
+      setTagList([]);
+    }
+    setTagInput('');
+    setSuggestedTags([]);
+  }, [task, isOpen]);
+
+  // Fetch tag suggestions from Gemini if editing
+  useEffect(() => {
+    if (isOpen && task && task.title) {
+      const fetchSuggestions = async () => {
+        try {
+          setLoadingSuggestions(true);
+          const res = await taskService.suggestTags(task.title, task.description || '');
+          if (res.success) {
+            setSuggestedTags(res.data);
+          }
+        } catch (e) {
+          console.error('[TaskModal] Failed to load tag suggestions:', e);
+        } finally {
+          setLoadingSuggestions(false);
+        }
+      };
+      fetchSuggestions();
     }
   }, [task, isOpen]);
 
   if (!isOpen) return null;
 
+  const handleAddTag = (newTag) => {
+    const cleaned = newTag.trim().toLowerCase().replace(/,/g, '');
+    if (cleaned && !tagList.includes(cleaned)) {
+      setTagList([...tagList, cleaned]);
+    }
+    setTagInput('');
+  };
+
+  const handleRemoveTag = (tagToRemove) => {
+    setTagList(tagList.filter((t) => t !== tagToRemove));
+  };
+
+  const handleAddSuggestedTag = (tag) => {
+    if (!tagList.includes(tag)) {
+      setTagList([...tagList, tag]);
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!title.trim()) return;
-
-    // Process tags to be an array of strings
-    const processedTags = tags
-      .split(',')
-      .map(t => t.trim())
-      .filter(t => t.length > 0);
 
     onSave({
       title: title.trim(),
@@ -52,7 +98,7 @@ const TaskModal = ({ isOpen, onClose, onSave, task = null }) => {
       priority,
       due_date: dueDate || null,
       due_time: dueTime || null,
-      tags: processedTags,
+      tags: tagList,
     });
   };
 
@@ -166,17 +212,71 @@ const TaskModal = ({ isOpen, onClose, onSave, task = null }) => {
           </div>
 
           {/* Tags */}
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">
-              Tags (comma separated)
+          <div className="space-y-2">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">
+              Tags
             </label>
-            <input
-              type="text"
-              placeholder="e.g., call, rahul, presentation"
-              value={tags}
-              onChange={(e) => setTags(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 transition-all"
-            />
+            <div className="flex flex-wrap gap-1.5 p-3 bg-white/5 border border-white/10 rounded-xl min-h-[46px] items-center">
+              {tagList.length > 0 ? (
+                tagList.map((tag) => (
+                  <TagBadge key={tag} tag={tag} onRemove={handleRemoveTag} />
+                ))
+              ) : (
+                <span className="text-xs text-gray-500 select-none">No tags added yet</span>
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Type tag and press Add or Enter..."
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddTag(tagInput);
+                  }
+                }}
+                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10 transition-all"
+              />
+              <button
+                type="button"
+                onClick={() => handleAddTag(tagInput)}
+                className="px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl text-xs font-bold transition-all focus:outline-none"
+              >
+                Add
+              </button>
+            </div>
+
+            {/* Suggested Tags (Edit Mode Only) */}
+            {task && (
+              <div className="mt-3 space-y-1.5">
+                <span className="block text-[10px] font-bold uppercase tracking-wider text-purple-400">
+                  AI Suggested Tags
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {loadingSuggestions ? (
+                    <span className="text-[10px] text-gray-500 italic animate-pulse">Generating suggestions...</span>
+                  ) : suggestedTags.length > 0 ? (
+                    suggestedTags
+                      .filter((tag) => !tagList.includes(tag))
+                      .map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => handleAddSuggestedTag(tag)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-purple-950/20 hover:bg-purple-950/40 border border-purple-500/10 hover:border-purple-500/25 text-purple-300 text-[10px] font-bold rounded-lg transition-all focus:outline-none"
+                        >
+                          + #{tag}
+                        </button>
+                      ))
+                  ) : (
+                    <span className="text-[10px] text-gray-500 italic">No additional suggestions available.</span>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Footer Actions */}
@@ -203,3 +303,4 @@ const TaskModal = ({ isOpen, onClose, onSave, task = null }) => {
 };
 
 export default TaskModal;
+
