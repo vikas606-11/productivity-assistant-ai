@@ -21,6 +21,9 @@ export { default as SummaryCard } from './SummaryCard';
 export { default as SuggestionCard } from './SuggestionCard';
 export { default as StatisticsCards } from './StatisticsCards';
 export { default as InsightsPanel } from './InsightsPanel';
+export { default as Navbar } from './Navbar';
+export { default as TaskTable } from './TaskTable';
+
 
 
 

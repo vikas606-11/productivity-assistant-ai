@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { taskService, noteService, aiService } from '../services/api';
 import { useToast } from '../components/Toast';
-import { FiCpu, FiLoader } from 'react-icons/fi';
+import { FiCpu, FiLoader, FiCheckCircle } from 'react-icons/fi';
 import VoiceInput from '../components/VoiceInput';
 import TaskModal from '../components/TaskModal';
 import {
@@ -84,7 +84,7 @@ const Dashboard = () => {
         const { tasks: newTasks, notes: newNotes } = res.data;
         const totalItems = (newTasks?.length || 0) + (newNotes?.length || 0);
         
-        showToast(`Successfully captured and saved ${totalItems} items!`, 'success');
+        showToast(`AI Processing Complete. Captured ${totalItems} items.`, 'success');
         setCapturedResult(res.data);
         setCaptureText('');
         
@@ -96,7 +96,7 @@ const Dashboard = () => {
       }
     } catch (err) {
       console.error(err);
-      showToast(err.response?.data?.message || 'Gemini processing failed. Check your API key config.', 'error');
+      showToast(err.response?.data?.message || 'Gemini processing failed. Check settings.', 'error');
     } finally {
       setCapturing(false);
     }
@@ -107,7 +107,7 @@ const Dashboard = () => {
     try {
       const res = await taskService.complete(taskId);
       if (res.success) {
-        showToast('Task marked as completed!', 'success');
+        showToast('Task Created & Completed successfully!', 'success');
         fetchData();
         fetchSummary();
       }
@@ -157,28 +157,111 @@ const Dashboard = () => {
       
       {/* Welcome Banner */}
       <div>
-        <h1 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight leading-none mb-2 bg-gradient-to-r from-white via-gray-100 to-gray-400 bg-clip-text text-transparent">
-          Hello, Productivity Partner ✦
+        <h1 className="text-3xl font-black text-white tracking-tight leading-none mb-1">
+          Productivity Workspace
         </h1>
-        <p className="text-gray-400 text-sm">
-          Optimize your task execution workflows and capture notes powered by Gemini AI.
+        <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider">
+          AI Copilot Command Center
         </p>
       </div>
 
-      {/* Statistics Cards */}
-      <section>
-        <StatisticsCards
-          statistics={summary?.statistics}
-          loading={loadingSummary}
-        />
+      {/* 1. Natural Language Capture Card (AT THE TOP) */}
+      <section className="glass-card p-6 md:p-8 relative overflow-hidden border border-dark-border shadow-2xl bg-[#181818] w-full">
+        {/* Glow decoration */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-brand-500/[0.03] rounded-full blur-3xl pointer-events-none" />
+        
+        <div className="flex items-center gap-2.5 mb-5 pb-3 border-b border-dark-border/40">
+          <div className="h-8.5 w-8.5 rounded-lg bg-brand-500/10 border border-brand-500/25 flex items-center justify-center text-brand-500 shrink-0">
+            <FiCpu className="h-4.5 w-4.5" />
+          </div>
+          <div>
+            <h2 className="text-sm font-bold text-white tracking-wide">AI Command Interface</h2>
+            <span className="text-[9px] text-gray-500 font-extrabold uppercase tracking-widest">Natural Language Parsing</span>
+          </div>
+        </div>
+
+        <form onSubmit={handleCapture} className="space-y-4">
+          <VoiceInput
+            captureText={captureText}
+            setCaptureText={setCaptureText}
+            disabled={capturing}
+            placeholder="What do you need to accomplish today?"
+            rows="3"
+          />
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              disabled={capturing || !captureText.trim()}
+              className="btn-primary w-full sm:w-auto px-8 py-3 bg-brand-500 hover:bg-brand-600 font-bold flex items-center justify-center gap-2 rounded-xl transition-all active:scale-95 disabled:opacity-40 disabled:pointer-events-none shadow-lg shadow-brand-500/20 text-xs uppercase tracking-wider focus:outline-none"
+            >
+              {capturing ? (
+                <>
+                  <FiLoader className="h-4.5 w-4.5 animate-spin" />
+                  AI Processing...
+                </>
+              ) : (
+                <>
+                  <FiCpu className="h-4.5 w-4.5" />
+                  Capture
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+
+        {/* Captured Items Preview */}
+        {capturedResult && (
+          <div className="mt-6 border-t border-dark-border pt-6 space-y-4 animate-fade-in">
+            <h3 className="text-[10px] font-bold tracking-wider uppercase text-emerald-400">
+              ✦ Captured Productivity Items
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Tasks */}
+              {capturedResult.tasks && capturedResult.tasks.length > 0 && (
+                <div className="bg-emerald-950/[0.05] border border-emerald-500/20 rounded-xl p-4 space-y-2">
+                  <div className="text-emerald-400 font-bold text-xs uppercase tracking-wider">
+                    Tasks ({capturedResult.tasks.length})
+                  </div>
+                  <ul className="space-y-2 text-xs">
+                    {capturedResult.tasks.map((t, idx) => (
+                      <li key={idx} className="text-gray-300">
+                        • <span className="font-bold text-gray-200">{t.title}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {/* Notes */}
+              {capturedResult.notes && capturedResult.notes.length > 0 && (
+                <div className="bg-purple-950/[0.05] border border-purple-500/20 rounded-xl p-4 space-y-2">
+                  <div className="text-purple-400 font-bold text-xs uppercase tracking-wider">
+                    Notes ({capturedResult.notes.length})
+                  </div>
+                  <ul className="space-y-2 text-xs">
+                    {capturedResult.notes.map((n, idx) => (
+                      <li key={idx} className="text-gray-300">
+                        • <span className="font-bold text-gray-200">{n.title}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </section>
 
-      {/* AI Summary and Actionable Insights Panel */}
+      {/* 2. Premium AI Summary Card & Suggestions */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <SummaryCard
           summary={summary?.summary}
           loading={loadingSummary}
           onRefresh={() => fetchSummary(true)}
+          stats={{
+            pending: summary?.statistics?.pending_count,
+            overdue: summary?.statistics?.overdue_count,
+            highPriority: summary?.insights?.high_priority?.length
+          }}
         />
         <SuggestionCard
           suggestions={summary?.suggestions}
@@ -186,106 +269,24 @@ const Dashboard = () => {
         />
       </section>
 
-      {/* Capture Input Form and Insights panel */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-        
-        {/* Priority Action Insights Hub */}
-        <section>
-          <InsightsPanel
-            insights={summary?.insights}
-            loading={loadingSummary}
-            onCompleteTask={handleCompleteTask}
-            onEditTask={handleOpenEditTask}
-            onDeleteTask={handleDeleteTask}
-          />
-        </section>
+      {/* 3. Statistics Grid */}
+      <section>
+        <StatisticsCards
+          statistics={summary?.statistics}
+          loading={loadingSummary}
+        />
+      </section>
 
-        {/* Natural Language Capture section */}
-        <section className="glass-card p-6 md:p-8 relative overflow-hidden border border-white/10 shadow-2xl bg-white/[0.02] min-h-[350px] flex flex-col justify-between">
-          {/* Glow decoration */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-brand-500/10 rounded-full blur-3xl pointer-events-none" />
-          
-          <div>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="h-9 w-9 rounded-xl bg-brand-500/20 border border-brand-500/30 flex items-center justify-center text-brand-400">
-                <FiCpu className="h-5 w-5" />
-              </div>
-              <h2 className="text-lg font-bold text-white tracking-wide">AI Capture Engine</h2>
-            </div>
-
-            <form onSubmit={handleCapture} className="space-y-4">
-              <VoiceInput
-                captureText={captureText}
-                setCaptureText={setCaptureText}
-                disabled={capturing}
-                placeholder="Type or use voice: 'Finish slide deck by 5 PM today and mark under Work, also note down hackathon idea to use Flask and SQLite.'"
-              />
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  disabled={capturing || !captureText.trim()}
-                  className="btn-primary w-full sm:w-auto px-8 py-3 bg-brand-500 hover:bg-brand-600 font-semibold flex items-center justify-center gap-2.5 rounded-xl transition-all active:scale-95 disabled:opacity-40 disabled:pointer-events-none shadow-lg shadow-brand-500/20"
-                >
-                  {capturing ? (
-                    <>
-                      <FiLoader className="h-4 w-4 animate-spin" />
-                      Processing NL Capture...
-                    </>
-                  ) : (
-                    <>
-                      <FiCpu className="h-4 w-4" />
-                      Parse Capture
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-
-          {/* Captured Items Results Preview */}
-          {capturedResult && (
-            <div className="mt-6 border-t border-white/5 pt-6 space-y-4 animate-fade-in">
-              <h3 className="text-xs font-bold tracking-wider uppercase text-emerald-400">
-                ✦ Captured Productivity Items
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Captured Tasks */}
-                {capturedResult.tasks && capturedResult.tasks.length > 0 && (
-                  <div className="bg-emerald-950/20 border border-emerald-500/25 rounded-2xl p-4 space-y-2.5">
-                    <div className="text-emerald-300 font-bold text-xs uppercase tracking-wider">
-                      Tasks ({capturedResult.tasks.length})
-                    </div>
-                    <ul className="space-y-2 text-xs">
-                      {capturedResult.tasks.map((t, idx) => (
-                        <li key={idx} className="text-gray-300">
-                          <span className="font-semibold text-gray-200">{t.title}</span>
-                          {t.category && <span className="text-[9px] bg-white/5 border border-white/10 text-gray-400 rounded px-1 ml-1.5">{t.category}</span>}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {/* Captured Notes */}
-                {capturedResult.notes && capturedResult.notes.length > 0 && (
-                  <div className="bg-purple-950/20 border border-purple-500/25 rounded-2xl p-4 space-y-2.5">
-                    <div className="text-purple-300 font-bold text-xs uppercase tracking-wider">
-                      Notes ({capturedResult.notes.length})
-                    </div>
-                    <ul className="space-y-2 text-xs">
-                      {capturedResult.notes.map((n, idx) => (
-                        <li key={idx} className="text-gray-300">
-                          <span className="font-semibold text-gray-200">{n.title}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </section>
-
-      </div>
+      {/* 4. Priority Insights Hub */}
+      <section>
+        <InsightsPanel
+          insights={summary?.insights}
+          loading={loadingSummary}
+          onCompleteTask={handleCompleteTask}
+          onEditTask={handleOpenEditTask}
+          onDeleteTask={handleDeleteTask}
+        />
+      </section>
 
       {/* Task Modal for Editing */}
       <TaskModal

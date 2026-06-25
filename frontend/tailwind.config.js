@@ -11,17 +11,25 @@ export default {
       // Custom colour palette for the project
       colors: {
         brand: {
-          50:  '#eef2ff',
-          100: '#e0e7ff',
-          200: '#c7d2fe',
-          300: '#a5b4fc',
-          400: '#818cf8',
-          500: '#6366f1',  // primary
-          600: '#4f46e5',
-          700: '#4338ca',
-          800: '#3730a3',
-          900: '#312e81',
-          950: '#1e1b4b',
+          50:  '#fef2f2',
+          100: '#fee2e2',
+          200: '#fecaca',
+          300: '#fca5a5',
+          400: '#f87171',
+          500: '#dc2626',  // Primary Accent (Red)
+          600: '#ef4444',  // Secondary Accent (Red)
+          700: '#b91c1c',
+          800: '#991b1b',
+          900: '#7f1d1d',
+          950: '#450a0a',
+        },
+        dark: {
+          bg: '#0A0A0A',
+          sec: '#111111',
+          card: '#181818',
+          border: '#2A2A2A',
+          textPri: '#FFFFFF',
+          textSec: '#B3B3B3',
         },
       },
 

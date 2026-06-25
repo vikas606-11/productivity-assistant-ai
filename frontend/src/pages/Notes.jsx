@@ -159,15 +159,15 @@ const Notes = () => {
             {filteredNotes.map((note) => (
               <div 
                 key={note.id} 
-                className="glass-card p-6 border border-white/10 shadow-lg hover:border-white/15 bg-white/[0.01] flex flex-col justify-between h-72 transition-all duration-200 group"
+                className="glass-card p-6 border border-dark-border shadow-lg hover:border-white/5 bg-dark-card/30 flex flex-col justify-between h-72 transition-all duration-250 group animate-fade-in"
               >
                 {/* Note Content */}
                 <div className="space-y-3 overflow-hidden">
-                  <h3 className="font-extrabold text-lg text-white tracking-wide truncate group-hover:text-brand-300 transition-colors">
+                  <h3 className="font-bold text-base text-white tracking-wide truncate group-hover:text-brand-500 transition-colors">
                     {note.title}
                   </h3>
                   {note.content ? (
-                    <p className="text-sm text-gray-400 leading-relaxed overflow-hidden break-words line-clamp-6">
+                    <p className="text-xs text-gray-400 leading-relaxed overflow-hidden break-words line-clamp-6 font-medium">
                       {note.content}
                     </p>
                   ) : (
@@ -176,8 +176,8 @@ const Notes = () => {
                 </div>
 
                 {/* Footer Metadata and Actions */}
-                <div className="flex items-center justify-between mt-5 pt-4 border-t border-white/5 shrink-0">
-                  <div className="flex items-center gap-1.5 text-xs text-gray-500 font-medium">
+                <div className="flex items-center justify-between mt-5 pt-4 border-t border-dark-border/40 shrink-0">
+                  <div className="flex items-center gap-1.5 text-[11px] text-gray-500 font-semibold uppercase tracking-wider">
                     <FiClock className="h-3.5 w-3.5" />
                     <span>{formatDate(note.created_at)}</span>
                   </div>
@@ -186,14 +186,14 @@ const Notes = () => {
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => handleOpenEditModal(note)}
-                      className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl border border-white/5 hover:border-white/10 transition-all focus:outline-none"
+                      className="p-2 text-gray-500 hover:text-white hover:bg-white/5 rounded-xl border border-dark-border hover:border-white/10 bg-dark-bg transition-all focus:outline-none"
                       title="Edit Note"
                     >
                       <FiEdit3 className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => handleDeleteNote(note.id)}
-                      className="p-2 text-gray-400 hover:text-rose-400 hover:bg-rose-950/20 rounded-xl border border-white/5 hover:border-rose-500/20 transition-all focus:outline-none"
+                      className="p-2 text-gray-500 hover:text-rose-400 hover:bg-rose-950/20 rounded-xl border border-dark-border hover:border-rose-500/20 bg-dark-bg transition-all focus:outline-none"
                       title="Delete Note"
                     >
                       <FiTrash2 className="h-4 w-4" />
