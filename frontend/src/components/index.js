@@ -11,4 +11,5 @@
  *   - Header
  */
 
-// Placeholder — no components yet
+export { default as VoiceInput } from './VoiceInput';
+

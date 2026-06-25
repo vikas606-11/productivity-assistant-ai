@@ -13,6 +13,8 @@ import {
   FiLoader 
 } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
+import VoiceInput from '../components/VoiceInput';
+
 
 const Dashboard = () => {
   const { showToast } = useToast();
@@ -126,13 +128,11 @@ const Dashboard = () => {
         </div>
 
         <form onSubmit={handleCapture} className="space-y-4">
-          <textarea
-            placeholder="Type anything... e.g., 'Prepare AWS presentation tomorrow at 5 PM, buy groceries under Shopping, and note meeting minutes with Sarah: we discussed server migrations.'"
-            value={captureText}
-            onChange={(e) => setCaptureText(e.target.value)}
+          <VoiceInput
+            captureText={captureText}
+            setCaptureText={setCaptureText}
             disabled={capturing}
-            rows="3"
-            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 transition-all resize-none leading-relaxed"
+            placeholder="Type or use microphone... e.g., 'Prepare AWS presentation tomorrow at 5 PM, buy groceries under Shopping, and note meeting minutes with Sarah: we discussed server migrations.'"
           />
           <div className="flex justify-end">
             <button

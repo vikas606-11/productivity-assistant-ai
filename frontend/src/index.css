@@ -86,3 +86,30 @@
   animation: bounceIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
+/* Sound wave animations for voice recognition indicator */
+@keyframes voiceWave {
+  0%, 100% {
+    height: 4px;
+  }
+  50% {
+    height: 16px;
+  }
+}
+
+.animate-wave-1 {
+  animation: voiceWave 0.8s ease-in-out infinite;
+}
+
+.animate-wave-2 {
+  animation: voiceWave 0.8s ease-in-out infinite 0.15s;
+}
+
+.animate-wave-3 {
+  animation: voiceWave 0.8s ease-in-out infinite 0.3s;
+}
+
+.animate-wave-4 {
+  animation: voiceWave 0.8s ease-in-out infinite 0.45s;
+}
+
+
