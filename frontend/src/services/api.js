@@ -1,27 +1,68 @@
-/**
- * api.js — Axios HTTP client (placeholder).
- * Full API service methods will be implemented in Commit #2.
- */
-import axios from 'axios'
+import axios from 'axios';
 
+// Axios instance configured for Vite local proxying
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1',
-  timeout: 10_000,
+  baseURL: '',
   headers: {
     'Content-Type': 'application/json',
   },
-})
+});
 
-// Request interceptor (auth tokens will be attached here later)
-api.interceptors.request.use(
-  (config) => config,
-  (error) => Promise.reject(error),
-)
+export const taskService = {
+  getAll: async () => {
+    const response = await api.get('/api/tasks');
+    return response.data;
+  },
+  get: async (id) => {
+    const response = await api.get(`/api/tasks/${id}`);
+    return response.data;
+  },
+  create: async (taskData) => {
+    const response = await api.post('/api/tasks', taskData);
+    return response.data;
+  },
+  update: async (id, taskData) => {
+    const response = await api.put(`/api/tasks/${id}`, taskData);
+    return response.data;
+  },
+  delete: async (id) => {
+    const response = await api.delete(`/api/tasks/${id}`);
+    return response.data;
+  },
+  complete: async (id) => {
+    const response = await api.patch(`/api/tasks/${id}/complete`);
+    return response.data;
+  },
+};
 
-// Response interceptor (global error handling will go here)
-api.interceptors.response.use(
-  (response) => response,
-  (error) => Promise.reject(error),
-)
+export const noteService = {
+  getAll: async () => {
+    const response = await api.get('/api/notes');
+    return response.data;
+  },
+  get: async (id) => {
+    const response = await api.get(`/api/notes/${id}`);
+    return response.data;
+  },
+  create: async (noteData) => {
+    const response = await api.post('/api/notes', noteData);
+    return response.data;
+  },
+  update: async (id, noteData) => {
+    const response = await api.put(`/api/notes/${id}`, noteData);
+    return response.data;
+  },
+  delete: async (id) => {
+    const response = await api.delete(`/api/notes/${id}`);
+    return response.data;
+  },
+};
 
-export default api
+export const aiService = {
+  capture: async (text) => {
+    const response = await api.post('/api/capture', { text });
+    return response.data;
+  },
+};
+
+export default api;
