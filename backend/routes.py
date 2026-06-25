@@ -1,6 +1,11 @@
+import logging
+from datetime import datetime
 from flask import Blueprint, jsonify, request
 from database import db
 from models import Task, Note
+from services.gemini_service import get_gemini_service
+
+logger = logging.getLogger(__name__)
 
 # Create Blueprints for modular route management
 api_bp = Blueprint('api', __name__)
@@ -41,6 +46,93 @@ def health_check():
         "status": "healthy",
         "database": "connected"
     })
+
+@api_bp.route('/api/capture', methods=['POST'])
+def capture_productivity_items():
+    """
+    Endpoint to capture and process natural language input into tasks/reminders/notes.
+    Saves extracted items to database.
+    """
+    data = request.get_json() or {}
+    text = data.get('text')
+    
+    if not text or not str(text).strip():
+        return make_response(False, "Input text is required", status_code=400)
+    
+    # Get current timestamp for relative date resolution context
+    current_time_str = datetime.now().isoformat()
+    
+    try:
+        service = get_gemini_service()
+        result = service.capture_items(str(text).strip(), current_time=current_time_str)
+    except ValueError as ve:
+        logger.error(f"Configuration error: {str(ve)}")
+        return make_response(False, f"Configuration error: {str(ve)}", status_code=500)
+    except Exception as e:
+        logger.error(f"AI parsing error: {str(e)}")
+        return make_response(False, f"Failed to analyze text: {str(e)}", status_code=500)
+
+    created_tasks = []
+    created_notes = []
+    
+    try:
+        items = result.get('items', [])
+        for item in items:
+            item_type = str(item.get('type', '')).lower()
+            
+            # Tasks and Reminders both map to the Task table
+            if item_type in ('task', 'reminder'):
+                tags = item.get('tags', [])
+                if isinstance(tags, list):
+                    tags_str = ','.join(map(str, tags))
+                else:
+                    tags_str = str(tags) if tags else None
+                
+                # Truncate strings to fit database schema constraints if necessary
+                due_date = item.get('due_date')
+                if due_date and len(str(due_date)) > 10:
+                    due_date = str(due_date)[:10]
+                due_time = item.get('due_time')
+                if due_time and len(str(due_time)) > 8:
+                    due_time = str(due_time)[:8]
+                    
+                task = Task(
+                    title=str(item.get('title', 'Untitled Task')).strip(),
+                    description=item.get('description', ''),
+                    category=item.get('category', 'Other'),
+                    tags=tags_str,
+                    due_date=due_date,
+                    due_time=due_time,
+                    priority=item.get('priority', 'Medium'),
+                    status='Pending'
+                )
+                db.session.add(task)
+                created_tasks.append(task)
+                
+            elif item_type == 'note':
+                note = Note(
+                    title=str(item.get('title', 'Untitled Note')).strip(),
+                    content=item.get('content', '')
+                )
+                db.session.add(note)
+                created_notes.append(note)
+                
+        db.session.commit()
+        
+        # Log database insertion result
+        logger.info(f"Successfully saved captured items to database: {len(created_tasks)} tasks, {len(created_notes)} notes.")
+        
+        # Format response data
+        response_data = {
+            "tasks": [t.to_dict() for t in created_tasks],
+            "notes": [n.to_dict() for n in created_notes]
+        }
+        return make_response(True, "Productivity items captured and saved successfully", response_data, status_code=201)
+        
+    except Exception as db_err:
+        db.session.rollback()
+        logger.error(f"Database operation failed: {str(db_err)}")
+        return make_response(False, f"Database saving failed: {str(db_err)}", status_code=500)
 
 # ==============================================================================
 # TASK ROUTES (tasks_bp)
